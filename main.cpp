@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 	MPI_Init(&argc, &argv);
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	string genome = "./files/50mb.fa";
-	string pattern = "./files/pattern_128.fa";
+	string genome = "./files/1mb.fa";
+	string pattern = "./files/pattern_8.fa";
 	if (!rank) cout << "Loading genomes..." << endl;
 	PatternMatcher pm(genome, pattern);
 
@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
 
 	MatchingTester::testNaive(pm);
 
-	MatchingTester::testCodedNaive(pm);
+	//MatchingTester::testCodedNaive(pm);
 
-	MatchingTester::testCodedNaiveOpenMP(pm);
+	//MatchingTester::testCodedNaiveOpenMP(pm);
 
 	//MatchingTester::testBoyerMoore(pm);
 
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 
 	//MatchingTester::testNaiveOpenMP(pm);
 
-	// MatchingTester::testNaiveParallel(pm);
+	MatchingTester::testNaiveParallel(pm);
 
 	//MatchingTester::testNaiveParallelOpenMP(pm);
 
