@@ -1,11 +1,12 @@
 #pragma once
 
 #define PENALTY -2
-#define DASH_PENALTY -1
+#define GAP_PENALTY -1
 #define DONE 0
 #define UP 1
 #define LEFT 2
 #define DIAG 3
+#define NO_OF_CHARS 256
 
 void matrix_set(int* matrix, int rowSize, int i, int j, int value)
 {

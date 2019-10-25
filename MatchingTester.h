@@ -20,4 +20,7 @@ public:
 	static bool testBoyerMoore(PatternMatcher& pm);
 	static bool testKMP(PatternMatcher& pm);
 	static bool testSmithWaterman(PatternMatcher& pm);
+
+	static bool testCodedNaive(PatternMatcher& pm);
+	static bool testCodedNaiveOpenMP(PatternMatcher& pm);
 };

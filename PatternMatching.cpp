@@ -4,6 +4,53 @@
 using namespace std;
 
 vector<int> prepareLPS(vector<char> pattern);
+vector<int> prepareBCH(vector<char> pattern);
+
+vector<unsigned char> PatternMatcher::encode(vector<char> text)
+{
+	vector<unsigned char> coded;
+	
+	int N = text.size();
+
+	int groupSize = 4;
+	int numOfGroups = N / 4;
+	coded.reserve(numOfGroups);
+
+	for (int i = 0; i < N; i += 4)
+	{
+		char first = text[i + 0];
+		char second = text[i + 1];
+		char third = text[i + 2];
+		char fourth = text[i + 3];
+
+		char group = 0;
+
+		group += getCodedValue(first);
+		group <<= 2;
+		group += getCodedValue(second);
+		group <<= 2;
+		group += getCodedValue(third);
+		group <<= 2;
+		group += getCodedValue(fourth);
+
+		coded.push_back(group);
+	}
+	return coded;
+}
+
+char PatternMatcher::getCodedValue(char c)
+{
+	if (c == 'A')
+		return 0b00000000;
+	else if (c == 'C')
+		return 0b00000001;
+	else if (c == 'G')
+		return 0b00000010;
+	else if (c == 'T')
+		return 0b00000011;
+	else
+		return 0;
+}
 
 vector<int> PatternMatcher::naive()
 {
@@ -49,7 +96,31 @@ vector<int> PatternMatcher::boyer_moore()
 
 	if (N > 0 && M > 0 && M <= N)
 	{
-		// TODO
+		Timer t;
+		t.start();
+
+		vector<int> badChars = prepareBCH(pattern);
+
+		int shift = 0;
+		while (shift <= (N - M))
+		{
+			int j = M - 1;
+			while (j >= 0 && pattern[j] == text[shift + j])
+				j--;
+			if (j < 0)
+			{
+				matches.push_back(shift);
+				shift += (shift + M < N) ? M - badChars[text[shift + M]] : 1;
+			}
+
+			else
+				shift += max(1, j - badChars[text[shift + j]]);
+		}
+		t.stop();
+
+		cout << "[BOYER-MOORE MATCH]: Text length: " << text.size() <<
+			", Pattern length: " << pattern.size() <<
+			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
@@ -155,8 +226,8 @@ vector<int> PatternMatcher::smith_waterman()
 		{
 			for (int j = 1; j < M; j++)
 			{
-				int score_up = matrix_get(matrix, M, i - 1, j) + DASH_PENALTY;
-				int score_left = matrix_get(matrix, M, i, j - 1) + DASH_PENALTY;
+				int score_up = matrix_get(matrix, M, i - 1, j) + GAP_PENALTY;
+				int score_left = matrix_get(matrix, M, i, j - 1) + GAP_PENALTY;
 				int score_diag = matrix_get(matrix, M, i - 1, j - 1) + similarityScore(text[i - 1], pattern[j - 1]);
 				double score_max = max(0, max(score_up, max(score_left, score_diag)));
 				matrix_set(matrix, M, i, j, score_max);
@@ -238,6 +309,15 @@ vector<int> PatternMatcher::smith_waterman()
 	{
 		cout << "[Smith-Waterman]: Text and pattern did not load properly...";
 	}
+	return matches;
+}
+
+vector<int> PatternMatcher::needleman_wunsch()
+{
+	// TODO
+	vector<int> matches;
+
+
 	return matches;
 }
 
@@ -565,7 +645,43 @@ vector<int> PatternMatcher::naive(vector<char> text, vector<char> pattern)
 	return matches;
 }
 
-std::vector<int> PatternMatcher::naiveOpenMP(std::vector<char> text, std::vector<char> pattern)
+vector<int> PatternMatcher::boyer_moore(vector<char> text, vector<char> pattern)
+{
+	vector<int> matches;
+
+	size_t N = text.size();
+	size_t M = pattern.size();
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+
+		vector<int> badChars = prepareBCH(pattern);
+
+		int shift = 0;
+		while (shift <= (N - M))
+		{
+			int j = M - 1;
+			while (j >= 0 && pattern[j] == text[shift + j])
+				j--;
+			if (j < 0)
+			{
+				matches.push_back(shift);
+				shift += (shift + M < N) ? M - badChars[text[shift + M]] : 1;
+			}
+
+			else
+				shift += max(1, j - badChars[text[shift + j]]);
+		}
+	}
+	else
+	{
+		cout << "[BOYER-MOORE MATCH] Text and pattern did not load properly...";
+	}
+
+	return matches;
+}
+
+vector<int> PatternMatcher::naiveOpenMP(vector<char> text, vector<char> pattern)
 {
 	vector<int> matches;
 
@@ -640,8 +756,8 @@ vector<int> PatternMatcher::smithWaterman(vector<char> text, vector<char> patter
 		{
 			for (int j = 1; j < M; j++)
 			{
-				int score_up = matrix_get(matrix, M, i - 1, j) + DASH_PENALTY;
-				int score_left = matrix_get(matrix, M, i, j - 1) + DASH_PENALTY;
+				int score_up = matrix_get(matrix, M, i - 1, j) + GAP_PENALTY;
+				int score_left = matrix_get(matrix, M, i, j - 1) + GAP_PENALTY;
 				int score_diag = matrix_get(matrix, M, i - 1, j - 1) + similarityScore(text[i - 1], pattern[j - 1]);
 				double score_max = max(0, max(score_up, max(score_left, score_diag)));
 				matrix_set(matrix, M, i, j, score_max);
@@ -717,6 +833,149 @@ vector<int> PatternMatcher::smithWaterman(vector<char> text, vector<char> patter
 		cout << "[Smith-Waterman]: Text and pattern did not load properly...";
 	}
 	return matches;
+}
+
+vector<int> PatternMatcher::coded_naive()
+{
+	vector<int> matches;
+
+	vector<unsigned char> codedText = encode(text);
+	vector<unsigned char> codedPattern = encode(pattern);
+
+	size_t N = codedText.size();
+	size_t M = codedPattern.size();
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+		CodedPattern patterns[4];
+		Timer t;
+		t.start();
+		CodedPattern pat1(codedPattern, 0);
+		CodedPattern pat2(codedPattern, 1);
+		CodedPattern pat3(codedPattern, 2);
+		CodedPattern pat4(codedPattern, 3);
+
+		patterns[0] = pat1;
+		patterns[1] = pat2;
+		patterns[2] = pat3;
+		patterns[3] = pat4;
+		for (int i = 0; i < N - M; i++) 
+		{
+			int j;
+			for (auto pattern : patterns)
+			{
+				if (pattern.compareFirstByte(codedText[i]))
+				{
+					j = 1;
+					while (j < pattern.size() - 1 && codedText[i + j] == pattern[j])
+						j++;
+					if (j == pattern.size() - 1)
+					{
+						if (pattern.compareLastByte(codedText[i + j]))
+							matches.push_back(i * 4 + pattern.prefix);
+					}
+				}
+			}
+		}
+		// 1 last check
+
+		t.stop();
+		cout << "[NAIVE MATCH - CODED]: Text length: " << text.size() <<
+			", Pattern length: " << pattern.size() <<
+			" -> Time: " << t.elapsed() << endl;
+	}
+	else
+	{
+		cout << "[NAIVE MATCH - CODED]: Text and pattern did not load properly...";
+	}
+	return matches;
+}
+
+std::vector<int> PatternMatcher::coded_naiveOpenMP()
+{
+	vector<int> matches;
+
+	vector<unsigned char> codedText = encode(text);
+	vector<unsigned char> codedPattern = encode(pattern);
+
+	size_t N = codedText.size();
+	size_t M = codedPattern.size();
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+		CodedPattern patterns[4];
+		int i;
+
+		Timer t;
+		CodedPattern pat1(codedPattern, 0);
+		CodedPattern pat2(codedPattern, 1);
+		CodedPattern pat3(codedPattern, 2);
+		CodedPattern pat4(codedPattern, 3);
+		t.start();
+
+		patterns[0] = pat1;
+		patterns[1] = pat2;
+		patterns[2] = pat3;
+		patterns[3] = pat4;
+		#pragma omp parallel for num_threads(2) schedule(static,100) shared(matches) private(i)
+		for (i = 0; i < N - M; i++)
+		{
+			int j;
+			for (auto pattern : patterns)
+			{
+				if (pattern.compareFirstByte(codedText[i]))
+				{
+					j = 1;
+					while (j < pattern.size() - 1 && codedText[i + j] == pattern[j])
+						j++;
+					if (j == pattern.size() - 1)
+					{
+						if (pattern.compareLastByte(codedText[i + j]))
+						#pragma omp critical
+						{
+							matches.push_back(i * 4 + pattern.prefix);
+						}
+					}
+				}
+			}
+		}
+		t.stop();
+
+		cout << "[NAIVE MATCH with openMP - CODED]: Text length: " << text.size() <<
+			", Pattern length: " << pattern.size() <<
+			" -> Time: " << t.elapsed() << endl;
+	}
+	else
+	{
+		cout << "[NAIVE MATCH with openMP - CODED]: Text and pattern did not load properly...";
+	}
+	return matches;
+}
+
+std::vector<int> PatternMatcher::coded_naiveParallel()
+{
+	return std::vector<int>();
+}
+
+std::vector<int> PatternMatcher::coded_naiveParallelOpenMP()
+{
+	return std::vector<int>();
+}
+
+std::vector<int> PatternMatcher::coded_naive(std::vector<char> text, std::vector<char> pattern)
+{
+	return std::vector<int>();
+}
+
+vector<int> prepareBCH(vector<char> pattern)
+{
+	int i; 
+	vector<int> badChars;
+	for (i = 0; i < NO_OF_CHARS; i++)
+		badChars.push_back(-1);
+	for (i = 0; i < pattern.size(); i++)
+		badChars[(int)pattern[i]] = i;
+	return badChars;
 }
 
 vector<int> prepareLPS(vector<char> pattern)

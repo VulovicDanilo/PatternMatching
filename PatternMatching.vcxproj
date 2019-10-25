@@ -144,6 +144,7 @@
     <ClCompile Include="PatternMatching.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CodedPattern.h" />
     <ClInclude Include="MatchingTester.h" />
     <ClInclude Include="PatternMatcher.h" />
     <ClInclude Include="Timer.h" />

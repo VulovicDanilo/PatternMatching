@@ -51,16 +51,24 @@ bool MatchingTester::testNaive(PatternMatcher& pm)
 
 bool MatchingTester::testBoyerMoore(PatternMatcher& pm)
 {
-	vector<int> matches = pm.boyer_moore();
-
-	return MatchingTester::test(pm, matches);
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.boyer_moore();
+		return MatchingTester::test(pm, matches);
+	}
 }
 
 bool MatchingTester::testKMP(PatternMatcher& pm)
 {
-	vector<int> matches = pm.kmp();
-
-	return MatchingTester::test(pm, matches);
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.kmp();
+		return MatchingTester::test(pm, matches);
+	}
 }
 
 bool MatchingTester::testSmithWaterman(PatternMatcher& pm)
@@ -71,6 +79,28 @@ bool MatchingTester::testSmithWaterman(PatternMatcher& pm)
 	{
 		vector<int> matches = pm.smith_waterman();
 		return true;
+	}
+}
+
+bool MatchingTester::testCodedNaive(PatternMatcher& pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.coded_naive();
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedNaiveOpenMP(PatternMatcher& pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.coded_naiveOpenMP();
+		return MatchingTester::test(pm, matches);
 	}
 }
 
