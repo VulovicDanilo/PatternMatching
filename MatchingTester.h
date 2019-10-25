@@ -23,4 +23,5 @@ public:
 
 	static bool testCodedNaive(PatternMatcher& pm);
 	static bool testCodedNaiveOpenMP(PatternMatcher& pm);
+	static bool testCodedNaiveParallel(PatternMatcher& pm);
 };

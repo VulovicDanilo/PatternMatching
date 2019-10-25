@@ -33,7 +33,7 @@ bool MatchingTester::test(PatternMatcher& pm, vector<int> matches)
 	}
 	else
 	{
-		cout << "Incorrect patterns" << endl;
+		cout << "Incorrect patterns (Matches: " << matches.size() << ")" << endl;
 	}
 	return correct;
 }
@@ -100,6 +100,17 @@ bool MatchingTester::testCodedNaiveOpenMP(PatternMatcher& pm)
 	if (rank == 0)
 	{
 		vector<int> matches = pm.coded_naiveOpenMP();
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedNaiveParallel(PatternMatcher& pm)
+{
+	int rank;
+	vector<int> matches = pm.coded_naiveParallel();
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
 		return MatchingTester::test(pm, matches);
 	}
 }

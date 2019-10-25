@@ -58,6 +58,8 @@ public:
 	std::vector<int> naiveParallel();
 	std::vector<int> naiveParallelOpenMP();
 
+	std::vector<int> boyer_mooreParallel();
+
 	static std::vector<int> naive(std::vector<char> text, std::vector<char> pattern);
 	static std::vector<int> boyer_moore(std::vector<char> text, std::vector<char> pattern);
 	static std::vector<int> naiveOpenMP(std::vector<char> text, std::vector<char> pattern);
@@ -69,5 +71,5 @@ public:
 	std::vector<int> coded_naiveParallel();
 	std::vector<int> coded_naiveParallelOpenMP();
 
-	static std::vector<int> coded_naive(std::vector<char> text, std::vector<char> pattern);
+	static std::vector<int> coded_naive(std::vector<unsigned char> text, std::vector<unsigned char> pattern);
 };

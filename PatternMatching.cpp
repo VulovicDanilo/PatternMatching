@@ -9,7 +9,7 @@ vector<int> prepareBCH(vector<char> pattern);
 vector<unsigned char> PatternMatcher::encode(vector<char> text)
 {
 	vector<unsigned char> coded;
-	
+
 	int N = text.size();
 
 	int groupSize = 4;
@@ -76,13 +76,13 @@ vector<int> PatternMatcher::naive()
 		}
 		t.stop();
 
-		cout << "[NAIVE MATCH]: Text length: " << text.size() <<
+		cout << "[NAIVE]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[NAIVE MATCH]: Text and pattern did not load properly...";
+		cout << "[NAIVE]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -112,19 +112,18 @@ vector<int> PatternMatcher::boyer_moore()
 				matches.push_back(shift);
 				shift += (shift + M < N) ? M - badChars[text[shift + M]] : 1;
 			}
-
 			else
 				shift += max(1, j - badChars[text[shift + j]]);
 		}
 		t.stop();
 
-		cout << "[BOYER-MOORE MATCH]: Text length: " << text.size() <<
+		cout << "[BOYER-MOORE]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[BOYER-MOORE MATCH] Text and pattern did not load properly...";
+		cout << "[BOYER-MOORE] Text and pattern did not load properly...";
 	}
 
 	return matches;
@@ -169,13 +168,13 @@ vector<int> PatternMatcher::kmp()
 		}
 		t.stop();
 
-		cout << "[KMP MATCH]: Text length: " << text.size() <<
+		cout << "[KMP]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[KMP MATCH] Text and pattern did not load properly...";
+		cout << "[KMP] Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -341,7 +340,7 @@ vector<int> PatternMatcher::naiveOpenMP()
 
 			if (j == M)
 			{
-				#pragma omp critical
+#pragma omp critical
 				{
 					matches.push_back(i);
 				}
@@ -349,20 +348,19 @@ vector<int> PatternMatcher::naiveOpenMP()
 		}
 		t.stop();
 
-		cout << "[NAIVE MATCH with openMP]: Text length: " << text.size() <<
+		cout << "[NAIVE with openMP]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[NAIVE MATCH with openMP]: Text and pattern did not load properly...";
+		cout << "[NAIVE with openMP]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
 
 vector<int> PatternMatcher::naiveParallel()
 {
-
 	size_t N = text.size();
 	size_t M = pattern.size();
 
@@ -376,12 +374,14 @@ vector<int> PatternMatcher::naiveParallel()
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		MPI_Status statuses[32];
-		MPI_Request requests[32];
-		int recvcnts[32];
 		int localCounts = 0;
-		int matchesSize = 0;
-		int displs[32] = { 0 };
+		int* counts = new int[size];
+		int* displs = new int[size];
+		int* alldata = new int[4];
+		for (int i = 0; i < size; i++)
+		{
+			counts[i] = displs[i] = 0;
+		}
 		vector<int> localMatches;
 		if (rank == 0)
 		{
@@ -394,93 +394,48 @@ vector<int> PatternMatcher::naiveParallel()
 			int i;
 			for (i = 1; i < size - 1; i++)
 			{
-				MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + M - 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+				MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + M, MPI_CHAR, i, 0, MPI_COMM_WORLD);
 			}
 			MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + (M >> 1), MPI_CHAR, i, 0, MPI_COMM_WORLD);
 
-			vector<char>::const_iterator first = text.begin() + 0;
-			vector<char>::const_iterator last = text.begin() + chunkSize + (M >> 1);
-			vector<char> data(first, last);
-
+			vector<char> data(text.begin(), text.begin() + chunkSize + (M >> 1));
 			localMatches = PatternMatcher::naive(data, pattern);
-			recvcnts[0] = localMatches.size();
-
-			matchesSize += recvcnts[0];
-			for (int i = 1; i < size; i++)
-			{
-				int count;
-				vector<int> buff;
-				buff.resize(N - M);
-				MPI_Recv(&recvcnts[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, &statuses[i]);
-				matchesSize += recvcnts[i];
-			}
-			for (int i = 1; i < size; i++)
-			{
-				displs[i] = recvcnts[i - 1] + displs[i - 1];
-			}
-		}
-		else if (rank < size - 1)
-		{
-			vector<char> data;
-			data.resize(chunkSize + M);
-			MPI_Recv(&data[0], chunkSize + M - 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-			localMatches = PatternMatcher::naive(data, pattern);
-			for (int i = 0; i < localMatches.size(); i++)
-			{
-				localMatches[i] += rank * chunkSize - (M >> 1);
-			}
-			localCounts = localMatches.size();
-			MPI_Send(&localCounts, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 		}
 		else
 		{
-			vector<char> data;
-			data.resize(chunkSize + M / 2);
-			MPI_Recv(&data[0], chunkSize + M, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-			localMatches = PatternMatcher::naive(data, pattern);
-			for (int i = 0; i < localMatches.size(); i++)
-			{
-				localMatches[i] += rank * chunkSize - (M >> 1);
-			}
-			localCounts = localMatches.size();
-			MPI_Send(&localCounts, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+			vector<char> buff;
+			buff.resize(chunkSize + M);
+			MPI_Recv(buff.data(), chunkSize + M, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
+			localMatches = PatternMatcher::naive(buff, pattern);
 		}
-		MPI_Barrier(MPI_COMM_WORLD);
+		for (int i = 0; i < localMatches.size(); i++)
+		{
+			localMatches[i] += rank * chunkSize - (M >> 1);
+		}
+		localCounts = localMatches.size();
+		MPI_Gather(&localCounts, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
 		if (rank == 0)
 		{
-			cout << "Matches: " << matchesSize << endl;
-			for (int x : localMatches)
+			for (int i = 0; i < size; i++)
 			{
-				matches.push_back(x);
+				displs[i] = (i > 0) ? (displs[i - 1] + counts[i - 1]) : 0;
 			}
-			for (int i = 1; i < size; i++)
-			{
-				if (recvcnts[i] > 0)
-				{
-					vector<int> recv(recvcnts[i]);
-					MPI_Recv(&recv[0], recvcnts[i], MPI_INT, i, 0, MPI_COMM_WORLD, &status);
-					for (int x : recv)
-					{
-						matches.push_back(x);
-					}
-				}
-			}
+			alldata = new int[counts[size - 1] + displs[size - 1]];
+			for (int k = 0; k < counts[size - 1] + displs[size - 1]; k++)
+				alldata[k] = 0;
 		}
-		else
-		{
-			if (localCounts > 0)
-			{
-				MPI_Send(&localMatches[0], localCounts, MPI_INT, 0, 0, MPI_COMM_WORLD);
-			}
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Gatherv(localMatches.data(), localCounts, MPI_INT, alldata, counts, displs, MPI_INT, 0, MPI_COMM_WORLD);
 		if (rank == 0)
 		{
+			matches.assign(alldata, alldata + counts[size - 1] + displs[size - 1]);
 			t.stop();
 			cout << "[Naive parallel]: Text length: " << text.size() <<
 				", Pattern length: " << pattern.size() <<
 				" -> Time: " << t.elapsed() << endl;
 		}
+		delete[] counts;
+		delete[] displs;
+		delete[] alldata;
 	}
 	else
 	{
@@ -507,10 +462,10 @@ vector<int> PatternMatcher::naiveParallelOpenMP()
 		MPI_Status status;
 		MPI_Status statuses[32];
 		MPI_Request requests[32];
-		int recvcnts[32];
+		int* counts = new int[size];
+		int* displs = new int[size];
+		int* alldata = new int[4];
 		int localCounts = 0;
-		int matchesSize = 0;
-		int displs[32] = { 0 };
 		vector<int> localMatches;
 		if (rank == 0)
 		{
@@ -527,93 +482,134 @@ vector<int> PatternMatcher::naiveParallelOpenMP()
 			}
 			MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + (M >> 1), MPI_CHAR, i, 0, MPI_COMM_WORLD);
 
-			vector<char>::const_iterator first = text.begin() + 0;
-			vector<char>::const_iterator last = text.begin() + chunkSize + (M >> 1);
-			vector<char> data(first, last);
-
+			vector<char> data(text.begin(), text.begin() + chunkSize + (M >> 1));
 			localMatches = PatternMatcher::naiveOpenMP(data, pattern);
-			recvcnts[0] = localMatches.size();
-
-			matchesSize += recvcnts[0];
-			for (int i = 1; i < size; i++)
-			{
-				int count;
-				vector<int> buff;
-				buff.resize(N - M);
-				MPI_Recv(&recvcnts[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, &statuses[i]);
-				matchesSize += recvcnts[i];
-			}
-			for (int i = 1; i < size; i++)
-			{
-				displs[i] = recvcnts[i - 1] + displs[i - 1];
-			}
-		}
-		else if (rank < size - 1)
-		{
-			vector<char> data;
-			data.resize(chunkSize + M);
-			MPI_Recv(&data[0], chunkSize + M - 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-			localMatches = PatternMatcher::naiveOpenMP(data, pattern);
-			for (int i = 0; i < localMatches.size(); i++)
-			{
-				localMatches[i] += rank * chunkSize - (M >> 1);
-			}
-			localCounts = localMatches.size();
-			MPI_Send(&localCounts, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 		}
 		else
 		{
-			vector<char> data;
-			data.resize(chunkSize + M / 2);
-			MPI_Recv(&data[0], chunkSize + M, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-			localMatches = PatternMatcher::naiveOpenMP(data, pattern);
-			for (int i = 0; i < localMatches.size(); i++)
-			{
+			vector<char> buff;
+			buff.resize(chunkSize + M);
+			MPI_Recv(buff.data(), chunkSize + M, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
+			localMatches = PatternMatcher::naiveOpenMP(buff, pattern);
+		}
+		for (int i = 0; i < localMatches.size(); i++)
+		{
+			if (rank)
 				localMatches[i] += rank * chunkSize - (M >> 1);
-			}
-			localCounts = localMatches.size();
-			MPI_Send(&localCounts, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 		}
-		MPI_Barrier(MPI_COMM_WORLD);
+		localCounts = localMatches.size();
+		MPI_Gather(&localCounts, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
 		if (rank == 0)
 		{
-			cout << "Matches: " << matchesSize << endl;
-			for (int x : localMatches)
+			for (int i = 0; i < size; i++)
 			{
-				matches.push_back(x);
+				displs[i] = (i > 0) ? (displs[i - 1] + counts[i - 1]) : 0;
 			}
-			for (int i = 1; i < size; i++)
-			{
-				if (recvcnts[i] > 0)
-				{
-					vector<int> recv(recvcnts[i]);
-					MPI_Recv(&recv[0], recvcnts[i], MPI_INT, i, 0, MPI_COMM_WORLD, &status);
-					for (int x : recv)
-					{
-						matches.push_back(x);
-					}
-				}
-			}
+			alldata = new int[counts[size - 1] + displs[size - 1]];
+			for (int k = 0; k < counts[size - 1] + displs[size - 1]; k++)
+				alldata[k] = 0;
 		}
-		else
-		{
-			if (localCounts > 0)
-			{
-				MPI_Send(&localMatches[0], localCounts, MPI_INT, 0, 0, MPI_COMM_WORLD);
-			}
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Gatherv(localMatches.data(), localCounts, MPI_INT, alldata, counts, displs, MPI_INT, 0, MPI_COMM_WORLD);
 		if (rank == 0)
 		{
+			matches.assign(alldata, alldata + counts[size - 1] + displs[size - 1]);
 			t.stop();
 			cout << "[Naive parallel with OpenMP]: Text length: " << text.size() <<
 				", Pattern length: " << pattern.size() <<
 				" -> Time: " << t.elapsed() << endl;
 		}
+		delete[] counts;
+		delete[] displs;
+		delete[] alldata;
 	}
 	else
 	{
 		cout << "[Naive parallel with OpenMP] Text and pattern did not load properly...";
+	}
+	return matches;
+}
+
+std::vector<int> PatternMatcher::boyer_mooreParallel()
+{
+	size_t N = text.size();
+	size_t M = pattern.size();
+
+	vector<int> matches;
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+		Timer t;
+		int rank;
+		int size;
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &size);
+		MPI_Status status;
+		int localCounts = 0;
+		int* counts = new int[size];
+		int* displs = new int[size];
+		int* alldata = new int[4];
+		for (int i = 0; i < size; i++)
+		{
+			counts[i] = displs[i] = 0;
+		}
+		vector<int> localMatches;
+		if (rank == 0)
+		{
+			t.start();
+		}
+
+		int chunkSize = N / size;
+		if (rank == 0)
+		{
+			int i;
+			for (i = 1; i < size - 1; i++)
+			{
+				MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + M, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+			}
+			MPI_Send(&text[i * chunkSize - (M >> 1)], chunkSize + (M >> 1), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+
+			vector<char> data(text.begin(), text.begin() + chunkSize + (M >> 1));
+			localMatches = PatternMatcher::boyer_moore(data, pattern);
+		}
+		else
+		{
+			vector<char> buff;
+			buff.resize(chunkSize + M);
+			MPI_Recv(buff.data(), chunkSize + M, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
+			localMatches = PatternMatcher::boyer_moore(buff, pattern);
+		}
+		for (int i = 0; i < localMatches.size(); i++)
+		{
+			localMatches[i] += rank * chunkSize - (M >> 1);
+		}
+		localCounts = localMatches.size();
+		MPI_Gather(&localCounts, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		if (rank == 0)
+		{
+			for (int i = 0; i < size; i++)
+			{
+				displs[i] = (i > 0) ? (displs[i - 1] + counts[i - 1]) : 0;
+			}
+			alldata = new int[counts[size - 1] + displs[size - 1]];
+			for (int k = 0; k < counts[size - 1] + displs[size - 1]; k++)
+				alldata[k] = 0;
+		}
+		MPI_Gatherv(localMatches.data(), localCounts, MPI_INT, alldata, counts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+		if (rank == 0)
+		{
+			matches.assign(alldata, alldata + counts[size - 1] + displs[size - 1]);
+			t.stop();
+			cout << "[BOYER-MOORE parallel]: Text length: " << text.size() <<
+				", Pattern length: " << pattern.size() <<
+				" -> Time: " << t.elapsed() << endl;
+		}
+		delete[] counts;
+		delete[] displs;
+		delete[] alldata;
+	}
+	else
+	{
+		cout << "[BOYER-MOORE parallel] Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -640,7 +636,7 @@ vector<int> PatternMatcher::naive(vector<char> text, vector<char> pattern)
 	}
 	else
 	{
-		cout << "[NAIVE MATCH]: Text and pattern did not load properly...";
+		cout << "[NAIVE]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -675,7 +671,7 @@ vector<int> PatternMatcher::boyer_moore(vector<char> text, vector<char> pattern)
 	}
 	else
 	{
-		cout << "[BOYER-MOORE MATCH] Text and pattern did not load properly...";
+		cout << "[BOYER-MOORE] Text and pattern did not load properly...";
 	}
 
 	return matches;
@@ -708,7 +704,7 @@ vector<int> PatternMatcher::naiveOpenMP(vector<char> text, vector<char> pattern)
 	}
 	else
 	{
-		cout << "[NAIVE MATCH with openMP]: Text and pattern did not load properly...";
+		cout << "[NAIVE with openMP]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -855,38 +851,36 @@ vector<int> PatternMatcher::coded_naive()
 		CodedPattern pat3(codedPattern, 2);
 		CodedPattern pat4(codedPattern, 3);
 
+		t.stop();
+		cout << "Time to generate patterns: " << t.elapsed() << endl;
+
 		patterns[0] = pat1;
 		patterns[1] = pat2;
 		patterns[2] = pat3;
 		patterns[3] = pat4;
-		for (int i = 0; i < N - M; i++) 
+		for (int i = 0; i < N - M; i++)
 		{
 			int j;
 			for (auto pattern : patterns)
 			{
-				if (pattern.compareFirstByte(codedText[i]))
+				j = 1;
+				while (j < pattern.size() - 1 && codedText[i + j] == pattern[j]) j++;
+				if (j == pattern.size() - 1)
 				{
-					j = 1;
-					while (j < pattern.size() - 1 && codedText[i + j] == pattern[j])
-						j++;
-					if (j == pattern.size() - 1)
-					{
-						if (pattern.compareLastByte(codedText[i + j]))
-							matches.push_back(i * 4 + pattern.prefix);
-					}
+					if (pattern.compareFirstByte(codedText[i]) && pattern.compareLastByte(codedText[i + j]))
+						matches.push_back(i * 4 + pattern.prefix);
 				}
 			}
 		}
-		// 1 last check
 
 		t.stop();
-		cout << "[NAIVE MATCH - CODED]: Text length: " << text.size() <<
+		cout << "[NAIVE - CODED]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[NAIVE MATCH - CODED]: Text and pattern did not load properly...";
+		cout << "[NAIVE - CODED]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
@@ -917,44 +911,124 @@ std::vector<int> PatternMatcher::coded_naiveOpenMP()
 		patterns[1] = pat2;
 		patterns[2] = pat3;
 		patterns[3] = pat4;
-		#pragma omp parallel for num_threads(2) schedule(static,100) shared(matches) private(i)
+#pragma omp parallel for num_threads(2) schedule(static,100) shared(matches) private(i)
 		for (i = 0; i < N - M; i++)
 		{
 			int j;
 			for (auto pattern : patterns)
 			{
-				if (pattern.compareFirstByte(codedText[i]))
+				j = 1;
+				while (j < pattern.size() - 1 && codedText[i + j] == pattern[j]) j++;
+				if (j == pattern.size() - 1)
 				{
-					j = 1;
-					while (j < pattern.size() - 1 && codedText[i + j] == pattern[j])
-						j++;
-					if (j == pattern.size() - 1)
+					if (pattern.compareFirstByte(codedText[i]) && pattern.compareLastByte(codedText[i + j]))
+#pragma omp critical
 					{
-						if (pattern.compareLastByte(codedText[i + j]))
-						#pragma omp critical
-						{
-							matches.push_back(i * 4 + pattern.prefix);
-						}
+						matches.push_back(i * 4 + pattern.prefix);
 					}
 				}
 			}
 		}
 		t.stop();
 
-		cout << "[NAIVE MATCH with openMP - CODED]: Text length: " << text.size() <<
+		cout << "[NAIVE with openMP - CODED]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[NAIVE MATCH with openMP - CODED]: Text and pattern did not load properly...";
+		cout << "[NAIVE with openMP - CODED]: Text and pattern did not load properly...";
 	}
 	return matches;
 }
 
-std::vector<int> PatternMatcher::coded_naiveParallel()
+vector<int> PatternMatcher::coded_naiveParallel()
 {
-	return std::vector<int>();
+	vector<unsigned char> codedText = encode(text);
+	vector<unsigned char> codedPattern = encode(pattern);
+
+	size_t N = codedText.size();
+	size_t M = codedPattern.size();
+
+	vector<int> matches;
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+		Timer t;
+		int rank;
+		int size;
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &size);
+		MPI_Status status;
+		int localCounts = 0;
+		int* counts = new int[size];
+		int* displs = new int[size];
+		int* alldata = new int[4];
+		for (int i = 0; i < size; i++)
+		{
+			counts[i] = displs[i] = 0;
+		}
+		vector<int> localMatches;
+		if (rank == 0)
+		{
+			t.start();
+		}
+
+		int chunkSize = N / size;
+		if (rank == 0)
+		{
+			int i;
+			for (i = 1; i < size - 1; i++)
+			{
+				MPI_Send(&codedText[i * chunkSize - (M >> 1)], chunkSize + M, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD);
+			}
+			MPI_Send(&codedText[i * chunkSize - (M >> 1)], chunkSize + (M >> 1), MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD);
+
+			vector<unsigned char> data(codedText.begin(), codedText.begin() + chunkSize + (M >> 1));
+			localMatches = PatternMatcher::coded_naive(data, codedPattern);
+		}
+		else
+		{
+			vector<unsigned char> buff;
+			buff.resize(chunkSize + M);
+			MPI_Recv(buff.data(), chunkSize + M, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD, &status);
+			localMatches = PatternMatcher::coded_naive(buff, codedPattern);
+		}
+		for (int i = 0; i < localMatches.size(); i++)
+		{
+			if (rank)
+				localMatches[i] += 4 * (rank * chunkSize - (M >> 1));
+		}
+		localCounts = localMatches.size();
+		MPI_Gather(&localCounts, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		if (rank == 0)
+		{
+			for (int i = 0; i < size; i++)
+			{
+				displs[i] = (i > 0) ? (displs[i - 1] + counts[i - 1]) : 0;
+			}
+			alldata = new int[counts[size - 1] + displs[size - 1]];
+			for (int k = 0; k < counts[size - 1] + displs[size - 1]; k++)
+				alldata[k] = 0;
+		}
+		MPI_Gatherv(localMatches.data(), localCounts, MPI_INT, alldata, counts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+		if (rank == 0)
+		{
+			matches.assign(alldata, alldata + counts[size - 1] + displs[size - 1]);
+			t.stop();
+			cout << "[Naive parallel - CODED]: Text length: " << text.size() <<
+				", Pattern length: " << pattern.size() <<
+				" -> Time: " << t.elapsed() << endl;
+		}
+		delete[] counts;
+		delete[] displs;
+		delete[] alldata;
+	}
+	else
+	{
+		cout << "[Naive parallel - CODED] Text and pattern did not load properly...";
+	}
+	return matches;
 }
 
 std::vector<int> PatternMatcher::coded_naiveParallelOpenMP()
@@ -962,14 +1036,52 @@ std::vector<int> PatternMatcher::coded_naiveParallelOpenMP()
 	return std::vector<int>();
 }
 
-std::vector<int> PatternMatcher::coded_naive(std::vector<char> text, std::vector<char> pattern)
+vector<int> PatternMatcher::coded_naive(vector<unsigned char> codedText, vector<unsigned char> codedPattern)
 {
-	return std::vector<int>();
+	vector<int> matches;
+
+	size_t N = codedText.size();
+	size_t M = codedPattern.size();
+
+	if (N > 0 && M > 0 && M <= N)
+	{
+		CodedPattern patterns[4];
+		CodedPattern pat1(codedPattern, 0);
+		CodedPattern pat2(codedPattern, 1);
+		CodedPattern pat3(codedPattern, 2);
+		CodedPattern pat4(codedPattern, 3);
+
+		patterns[0] = pat1;
+		patterns[1] = pat2;
+		patterns[2] = pat3;
+		patterns[3] = pat4;
+		for (int i = 0; i < N - M; i++)
+		{
+			int j;
+			for (auto pattern : patterns)
+			{
+				j = 1;
+				while (j < pattern.size() - 1 && codedText[i + j] == pattern[j]) j++;
+				if (j == pattern.size() - 1)
+				{
+					if (pattern.compareFirstByte(codedText[i]) && pattern.compareLastByte(codedText[i + j]))
+					{
+						matches.push_back(4 * i + pattern.prefix);
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		cout << "[NAIVE - CODED]: Text and pattern did not load properly...";
+	}
+	return matches;
 }
 
 vector<int> prepareBCH(vector<char> pattern)
 {
-	int i; 
+	int i;
 	vector<int> badChars;
 	for (i = 0; i < NO_OF_CHARS; i++)
 		badChars.push_back(-1);
