@@ -2,6 +2,8 @@
 #include <vector>
 #include <bitset>
 
+#define NUM_OF_CHARS 256
+
 class CodedPattern
 {
 private:
@@ -46,6 +48,8 @@ public:
 	int prefix;
 	int suffix;
 	std::vector<unsigned char> content;
+	int badChars[NUM_OF_CHARS];
+
 	unsigned char firstByte;
 	unsigned char lastByte;
 
@@ -91,6 +95,17 @@ public:
 
 		firstByte = content.front();
 		lastByte = content.back();
+
+		for (int i = 0; i < NUM_OF_CHARS; i++)
+			badChars[i] = -1;
+		for (int i = 1; i < content.size(); i++)
+			badChars[(int)content[i]] = i;
+
+		/*for (int x : content)
+		{
+			std::cout << x << " ";
+		}
+		std::cout << std::endl;*/
 	}
 
 	bool compareFirstByte(unsigned char b)

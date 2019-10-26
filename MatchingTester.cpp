@@ -30,10 +30,14 @@ bool MatchingTester::test(PatternMatcher& pm, vector<int> matches)
 	if (correct)
 	{
 		cout << "Found patterns are correct (Matches: " << matches.size() << ")" << endl;
+		for (int x : matches)
+			cout << x << endl;
 	}
 	else
 	{
 		cout << "Incorrect patterns (Matches: " << matches.size() << ")" << endl;
+		for (int x : matches)
+			cout << x << endl;
 	}
 	return correct;
 }
@@ -56,6 +60,17 @@ bool MatchingTester::testBoyerMoore(PatternMatcher& pm)
 	if (rank == 0)
 	{
 		vector<int> matches = pm.boyer_moore();
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testBoyerMooreParallel(PatternMatcher& pm)
+{
+	int rank;
+	vector<int> matches = pm.boyer_mooreParallel();
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
 		return MatchingTester::test(pm, matches);
 	}
 }
@@ -109,6 +124,39 @@ bool MatchingTester::testCodedNaiveParallel(PatternMatcher& pm)
 	int rank;
 	vector<int> matches = pm.coded_naiveParallel();
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedBoyerMoore(PatternMatcher& pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.coded_boyer_moore();
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedBoyerMooreParallel(PatternMatcher& pm)
+{
+	int rank;
+	vector<int> matches = pm.coded_boyer_mooreParallel();
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedBoyerMooreParallelOpenMP(PatternMatcher& pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	vector<int> matches = pm.coded_boyer_mooreParallelOpenMP();
 	if (rank == 0)
 	{
 		return MatchingTester::test(pm, matches);

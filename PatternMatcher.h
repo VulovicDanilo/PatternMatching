@@ -36,8 +36,6 @@ public:
 
 			text.erase(std::remove(text.begin(), text.end(), '\n'), text.end());
 			pattern.erase(std::remove(pattern.begin(), pattern.end(), '\n'), pattern.end());
-
-			
 		}
 		else
 		{
@@ -66,10 +64,19 @@ public:
 	static std::vector<int> smithWaterman(std::vector<char> text, std::vector<char> pattern);
 
 	std::vector<int> coded_naive();
+	std::vector<int> coded_boyer_moore();
 
 	std::vector<int> coded_naiveOpenMP();
 	std::vector<int> coded_naiveParallel();
 	std::vector<int> coded_naiveParallelOpenMP();
 
+	std::vector<int> coded_boyer_mooreOpenMP();
+	std::vector<int> coded_boyer_mooreParallel();
+	std::vector<int> coded_boyer_mooreParallelOpenMP();
+
 	static std::vector<int> coded_naive(std::vector<unsigned char> text, std::vector<unsigned char> pattern);
+	static std::vector<int> coded_naiveOpenMP(std::vector<unsigned char> text, std::vector<unsigned char> pattern);
+	static std::vector<int> coded_boyer_moore(std::vector<unsigned char> text, std::vector<unsigned char> pattern);
+	static std::vector<int> coded_boyer_mooreOpenMP(std::vector<unsigned char> codedText, std::vector<unsigned char> codedPattern);
+
 };
