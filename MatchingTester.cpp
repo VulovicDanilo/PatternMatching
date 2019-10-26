@@ -30,14 +30,10 @@ bool MatchingTester::test(PatternMatcher& pm, vector<int> matches)
 	if (correct)
 	{
 		cout << "Found patterns are correct (Matches: " << matches.size() << ")" << endl;
-		for (int x : matches)
-			cout << x << endl;
 	}
 	else
 	{
 		cout << "Incorrect patterns (Matches: " << matches.size() << ")" << endl;
-		for (int x : matches)
-			cout << x << endl;
 	}
 	return correct;
 }
