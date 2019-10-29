@@ -23,10 +23,14 @@ private:
 	friend class MatchingTester;
 
 public:
-	PatternMatcher() {	}
+	PatternMatcher() 
+	{	
+		text = std::vector<char>();
+		pattern = std::vector<char>();
+	}
 	PatternMatcher(std::string textFileName, std::string patternFileName)
 	{
-		std::ifstream tfs(textFileName), pfs(patternFileName);
+		/*std::ifstream tfs(textFileName), pfs(patternFileName);
 		if (!tfs.fail() && !pfs.fail())
 		{
 			text.assign((std::istreambuf_iterator<char>(tfs)),
@@ -40,11 +44,16 @@ public:
 		else
 		{
 			std::cout << "there is a problem with one of file streams" << std::endl;
-		}
+		}*/
+		this->loadText(textFileName);
+		this->loadPattern(patternFileName);
 	}
 
-	inline size_t textLength() { return text.size(); }
-	inline size_t patternLength() { return pattern.size(); }
+	void loadText(std::string textFileName);
+	void loadPattern(std::string patternFileName);
+
+	inline std::size_t textLength() { return text.size(); }
+	inline std::size_t patternLength() { return pattern.size(); }
 
 	std::vector<int> naive();
 	std::vector<int> boyer_moore();

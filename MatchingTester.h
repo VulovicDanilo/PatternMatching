@@ -26,8 +26,10 @@ public:
 	static bool testCodedNaive(PatternMatcher& pm);
 	static bool testCodedNaiveOpenMP(PatternMatcher& pm);
 	static bool testCodedNaiveParallel(PatternMatcher& pm);
+	static bool testCodedNaiveParallelOpenMP(PatternMatcher& pm);
 
 	static bool testCodedBoyerMoore(PatternMatcher& pm);
+	static bool testCodedBoyerMooreOpenMP(PatternMatcher& pm);
 	static bool testCodedBoyerMooreParallel(PatternMatcher& pm);
 	static bool testCodedBoyerMooreParallelOpenMP(PatternMatcher& pm);
 };

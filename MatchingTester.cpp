@@ -6,12 +6,6 @@ using namespace std;
 
 bool MatchingTester::test(PatternMatcher& pm, vector<int> matches)
 {
-	/*cout << "Pattern matched at indices: ";
-	for (int i = 0; i < matches.size(); i++)
-	{
-		cout << matches[i] << " ";
-	}
-	cout << endl;*/
 	bool correct = true;
 	for (unsigned int i = 0; (i < matches.size() && correct); i++)
 	{
@@ -126,6 +120,17 @@ bool MatchingTester::testCodedNaiveParallel(PatternMatcher& pm)
 	}
 }
 
+bool MatchingTester::testCodedNaiveParallelOpenMP(PatternMatcher & pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	vector<int> matches = pm.coded_naiveParallelOpenMP();
+	if (rank == 0)
+	{
+		return MatchingTester::test(pm, matches);
+	}
+}
+
 bool MatchingTester::testCodedBoyerMoore(PatternMatcher& pm)
 {
 	int rank;
@@ -133,6 +138,17 @@ bool MatchingTester::testCodedBoyerMoore(PatternMatcher& pm)
 	if (rank == 0)
 	{
 		vector<int> matches = pm.coded_boyer_moore();
+		return MatchingTester::test(pm, matches);
+	}
+}
+
+bool MatchingTester::testCodedBoyerMooreOpenMP(PatternMatcher & pm)
+{
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+		vector<int> matches = pm.coded_boyer_mooreOpenMP();
 		return MatchingTester::test(pm, matches);
 	}
 }
@@ -162,8 +178,8 @@ bool MatchingTester::testCodedBoyerMooreParallelOpenMP(PatternMatcher& pm)
 bool MatchingTester::testNaiveParallel(PatternMatcher& pm)
 {
 	int rank;
-	vector<int> matches = pm.naiveParallel();
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	vector<int> matches = pm.naiveParallel();
 	if (rank == 0)
 	{
 		return MatchingTester::test(pm, matches);

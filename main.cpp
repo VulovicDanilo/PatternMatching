@@ -10,54 +10,35 @@ int main(int argc, char* argv[])
 	MPI_Init(&argc, &argv);
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	string genome = "./files/100mb.fa";
-	string pattern = "./files/pattern_32.fa";
-	if (!rank) cout << "Loading genomes..." << endl;
-	PatternMatcher pm(genome, pattern);
+	string hi;
+	hi = "hi";
+	string text;
+	text = "./files/250mb.fa";
+	string pattern;
+	pattern = "./files/pattern_32.fa";
+	PatternMatcher pm;
+	if (!rank)
+	{
+		cout << "Loading files..." << endl;
+		pm.loadText(text);
+		pm.loadPattern(pattern);
+		cout << "Files Loaded. Matching started..." << endl;
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
 
-	if (!rank) cout << "Genomes loaded. Matching started..." << endl;
 
 	MatchingTester::testNaive(pm);
 
-	MatchingTester::testNaiveParallelOpenMP(pm);
+	// MatchingTester::testCodedNaiveParallelOpenMP(pm);
 
-	MatchingTester::testCodedNaive(pm);
+	MatchingTester::testCodedBoyerMooreOpenMP(pm);
 
-	MatchingTester::testCodedNaiveParallel(pm);
+	MatchingTester::testCodedBoyerMooreOpenMP(pm);
 
-	//MatchingTester::testCodedNaiveParallel(pm);
-
-	//MatchingTester::testCodedNaive(pm);
-
-	MatchingTester::testBoyerMoore(pm);
-
-	MatchingTester::testBoyerMooreParallel(pm);
-
-	MatchingTester::testCodedBoyerMoore(pm);
-
-	MatchingTester::testCodedBoyerMooreParallelOpenMP(pm);
-
-	//MatchingTester::testBoyerMoore(pm);
-
-	//MatchingTester::testBoyerMooreParallel(pm);
-
-	//MatchingTester::testCodedNaiveOpenMP(pm);
-
-	//MatchingTester::testBoyerMoore(pm);
-
-	//MatchingTester::testKMP(pm);
-
-	//MatchingTester::testNaiveOpenMP(pm);
-
-	//MatchingTester::testNaiveParallel(pm);
-
-	//MatchingTester::testNaiveParallelOpenMP(pm);
-
-	//MatchingTester::testCodedNaiveParallel(pm);
-
-	//MatchingTester::testSmithWaterman(pm);
-
-	if (!rank) cout << "Matching over." << endl;
+	if (!rank)
+	{
+		cout << "Matching over." << endl;
+	}
 	MPI_Finalize();
 	return 0;
 }

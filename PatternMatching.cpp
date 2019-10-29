@@ -55,6 +55,38 @@ char PatternMatcher::getCodedValue(char c)
 		return 0;
 }
 
+void PatternMatcher::loadText(std::string textFileName)
+{
+	ifstream tfs(textFileName);
+	if (!tfs.fail())
+	{
+		text.assign((istreambuf_iterator<char>(tfs)),
+			(istreambuf_iterator<char>()));
+
+		text.erase(std::remove(text.begin(), text.end(), '\n'), text.end());
+	}
+	else
+	{
+		cout << "there is a problem with one of file streams" << endl;
+	}
+}
+
+void PatternMatcher::loadPattern(std::string patternFileName)
+{
+	ifstream pfs(patternFileName);
+	if (!pfs.fail())
+	{
+		pattern.assign((istreambuf_iterator<char>(pfs)),
+			(istreambuf_iterator<char>()));
+
+		pattern.erase(std::remove(pattern.begin(), pattern.end(), '\n'), pattern.end());
+	}
+	else
+	{
+		cout << "there is a problem with one of file streams" << endl;
+	}
+}
+
 vector<int> PatternMatcher::naive()
 {
 	vector<int> matches;
@@ -148,8 +180,8 @@ vector<int> PatternMatcher::kmp()
 
 		lps = prepareLPS(pattern);
 
-		int i = 0; // text index
-		int j = 0; // pattern index
+		int i = 0;
+		int j = 0;
 
 		while (i < N) {
 			if (pattern[j] == text[i]) {
@@ -364,34 +396,43 @@ vector<int> PatternMatcher::naiveOpenMP()
 
 vector<int> PatternMatcher::naiveParallel()
 {
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
 	size_t N = text.size();
 	size_t M = pattern.size();
 
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD); 
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		pattern.resize(M);
+	}
+	MPI_Bcast(&pattern[0], pattern.size(), MPI_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
+		int localCounts = 0;
+		vector<int> localMatches;
 		for (int i = 0; i < size; i++)
 		{
 			counts[i] = displs[i] = 0;
 		}
-		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -413,7 +454,8 @@ vector<int> PatternMatcher::naiveParallel()
 		}
 		for (int i = 0; i < localMatches.size(); i++)
 		{
-			localMatches[i] += rank * chunkSize - (M >> 1);
+			if (rank)
+				localMatches[i] += rank * chunkSize - (M >> 1);
 		}
 		localCounts = localMatches.size();
 		MPI_Gather(&localCounts, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -449,22 +491,30 @@ vector<int> PatternMatcher::naiveParallel()
 
 vector<int> PatternMatcher::naiveParallelOpenMP()
 {
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	size_t N = text.size();
 	size_t M = pattern.size();
 
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		pattern.resize(M);
+	}
+	MPI_Bcast(&pattern[0], pattern.size(), MPI_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		MPI_Status statuses[32];
-		MPI_Request requests[32];
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -474,8 +524,6 @@ vector<int> PatternMatcher::naiveParallelOpenMP()
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -534,20 +582,30 @@ vector<int> PatternMatcher::naiveParallelOpenMP()
 
 vector<int> PatternMatcher::boyer_mooreParallel()
 {
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
 	size_t N = text.size();
 	size_t M = pattern.size();
 
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		pattern.resize(M);
+	}
+	MPI_Bcast(&pattern[0], pattern.size(), MPI_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -555,13 +613,12 @@ vector<int> PatternMatcher::boyer_mooreParallel()
 		{
 			counts[i] = displs[i] = 0;
 		}
+		int localCounts = 0;
 		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -1010,17 +1067,27 @@ vector<int> PatternMatcher::coded_naiveParallel()
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
 
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		codedPattern.resize(M);
+	}
+	MPI_Bcast(&codedPattern[0], M, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -1028,13 +1095,12 @@ vector<int> PatternMatcher::coded_naiveParallel()
 		{
 			counts[i] = displs[i] = 0;
 		}
+		int localCounts = 0;
 		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -1099,17 +1165,27 @@ vector<int> PatternMatcher::coded_naiveParallelOpenMP()
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
 
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		codedPattern.resize(M);
+	}
+	MPI_Bcast(&codedPattern[0], M, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -1117,13 +1193,13 @@ vector<int> PatternMatcher::coded_naiveParallelOpenMP()
 		{
 			counts[i] = displs[i] = 0;
 		}
+		int localCounts = 0;
 		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
 
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -1204,7 +1280,6 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP()
 		patterns[1] = pat2;
 		patterns[2] = pat3;
 		patterns[3] = pat4;
-		// TODO
 		int k = 0;
 #pragma omp parallel for num_threads(4) schedule(static,1) shared(matches) private(k)
 		for (k = 0; k < 4; k++)
@@ -1218,7 +1293,6 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP()
 					j--;
 				if (j == 0)
 				{
-					// matches.push_back(shift);
 					if (patterns[k].compareFirstByte(codedText[shift]) && patterns[k].compareLastByte(codedText[shift + localM - 1]))
 #pragma omp critical
 					{
@@ -1253,17 +1327,27 @@ vector<int> PatternMatcher::coded_boyer_mooreParallel()
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
 
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		codedPattern.resize(M);
+	}
+	MPI_Bcast(&codedPattern[0], M, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -1271,13 +1355,12 @@ vector<int> PatternMatcher::coded_boyer_mooreParallel()
 		{
 			counts[i] = displs[i] = 0;
 		}
+		int localCounts = 0;
 		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -1342,17 +1425,27 @@ vector<int> PatternMatcher::coded_boyer_mooreParallelOpenMP()
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
 
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int chunkSize = N / size;
+
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank)
+	{
+		codedPattern.resize(M);
+	}
+	MPI_Bcast(&codedPattern[0], M, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
 	vector<int> matches;
 
 	if (N > 0 && M > 0 && M <= N)
 	{
 		Timer t;
-		int rank;
-		int size;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		MPI_Comm_size(MPI_COMM_WORLD, &size);
 		MPI_Status status;
-		int localCounts = 0;
 		int* counts = new int[size];
 		int* displs = new int[size];
 		int* alldata = new int[4];
@@ -1360,13 +1453,12 @@ vector<int> PatternMatcher::coded_boyer_mooreParallelOpenMP()
 		{
 			counts[i] = displs[i] = 0;
 		}
+		int localCounts = 0;
 		vector<int> localMatches;
 		if (rank == 0)
 		{
 			t.start();
 		}
-
-		int chunkSize = N / size;
 		if (rank == 0)
 		{
 			int i;
@@ -1583,7 +1675,6 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP(vector<unsigned char> codedT
 		patterns[1] = pat2;
 		patterns[2] = pat3;
 		patterns[3] = pat4;
-		// TODO
 		int k = 0;
 #pragma omp parallel for num_threads(4) schedule(static,1) shared(matches) private(k)
 		for (k = 0; k < 4; k++)
@@ -1597,7 +1688,6 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP(vector<unsigned char> codedT
 					j--;
 				if (j == 0)
 				{
-					// matches.push_back(shift);
 					if (patterns[k].compareFirstByte(codedText[shift]) && patterns[k].compareLastByte(codedText[shift + localM - 1]))
 #pragma omp critical
 					{
