@@ -10,6 +10,7 @@
 #include <set>
 #include "Timer.h"
 #include "CodedPattern.h"
+#include <stdio.h>
 
 class PatternMatcher
 {
@@ -30,27 +31,13 @@ public:
 	}
 	PatternMatcher(std::string textFileName, std::string patternFileName)
 	{
-		/*std::ifstream tfs(textFileName), pfs(patternFileName);
-		if (!tfs.fail() && !pfs.fail())
-		{
-			text.assign((std::istreambuf_iterator<char>(tfs)),
-				(std::istreambuf_iterator<char>()));
-			pattern.assign((std::istreambuf_iterator<char>(pfs)),
-				(std::istreambuf_iterator<char>()));
-
-			text.erase(std::remove(text.begin(), text.end(), '\n'), text.end());
-			pattern.erase(std::remove(pattern.begin(), pattern.end(), '\n'), pattern.end());
-		}
-		else
-		{
-			std::cout << "there is a problem with one of file streams" << std::endl;
-		}*/
 		this->loadText(textFileName);
 		this->loadPattern(patternFileName);
 	}
 
 	void loadText(std::string textFileName);
 	void loadPattern(std::string patternFileName);
+	void loadTextChunk(std::string textFileName);
 
 	inline std::size_t textLength() { return text.size(); }
 	inline std::size_t patternLength() { return pattern.size(); }

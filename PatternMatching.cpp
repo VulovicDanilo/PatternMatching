@@ -35,9 +35,6 @@ vector<unsigned char> PatternMatcher::encode(vector<char> text)
 
 		coded.push_back(group);
 	}
-	/*for (int x : coded)
-		cout << x << " ";
-	cout << endl;*/
 	return coded;
 }
 
@@ -57,13 +54,17 @@ char PatternMatcher::getCodedValue(char c)
 
 void PatternMatcher::loadText(std::string textFileName)
 {
+	Timer t;
 	ifstream tfs(textFileName);
 	if (!tfs.fail())
 	{
+		t.start();
 		text.assign((istreambuf_iterator<char>(tfs)),
 			(istreambuf_iterator<char>()));
 
 		text.erase(std::remove(text.begin(), text.end(), '\n'), text.end());
+		t.stop();
+		cout << "Text loaded in: " << t.elapsed() << " sekundi." << endl;
 	}
 	else
 	{
@@ -73,18 +74,36 @@ void PatternMatcher::loadText(std::string textFileName)
 
 void PatternMatcher::loadPattern(std::string patternFileName)
 {
+	Timer t;
 	ifstream pfs(patternFileName);
 	if (!pfs.fail())
 	{
+		t.start();
 		pattern.assign((istreambuf_iterator<char>(pfs)),
 			(istreambuf_iterator<char>()));
 
 		pattern.erase(std::remove(pattern.begin(), pattern.end(), '\n'), pattern.end());
+		t.stop();
+		cout << "Pattern loaded in: " << t.elapsed() << " sekundi." << endl;
 	}
 	else
 	{
 		cout << "there is a problem with one of file streams" << endl;
 	}
+}
+
+void PatternMatcher::loadTextChunk(string textFileName)
+{
+	Timer t;
+	t.start();
+	ifstream ifs(textFileName);
+	char buff[FASTA_FILE_ROW_SIZE];
+	while (ifs.read(buff, FASTA_FILE_ROW_SIZE))
+	{
+		text.insert(text.end(), buff, buff + 64);
+	}
+	t.stop();
+	cout << "Text loaded in " << t.elapsed() << " seconds." << endl;
 }
 
 vector<int> PatternMatcher::naive()
@@ -406,7 +425,7 @@ vector<int> PatternMatcher::naiveParallel()
 
 	int chunkSize = N / size;
 
-	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD); 
+	MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 	MPI_Bcast(&M, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 	MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if (rank)

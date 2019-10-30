@@ -7,6 +7,7 @@
 #define LEFT 2
 #define DIAG 3
 #define NO_OF_CHARS 256
+#define FASTA_FILE_ROW_SIZE 65
 
 void matrix_set(int* matrix, int rowSize, int i, int j, int value)
 {
