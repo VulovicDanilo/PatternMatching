@@ -141,7 +141,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MatchingTester.cpp" />
-    <ClCompile Include="PatternMatching.cpp" />
+    <ClCompile Include="PatternMatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CodedPattern.h" />

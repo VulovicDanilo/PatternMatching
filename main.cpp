@@ -13,14 +13,13 @@ int main(int argc, char* argv[])
 	string hi;
 	hi = "hi";
 	string text;
-	text = "./files/1mb.fa";
+	text = "./files/100mb.fa";
 	string pattern;
-	pattern = "./files/pattern_8.fa";
+	pattern = "./files/pattern_32.fa";
 	PatternMatcher pm;
 	if (!rank)
 	{
 		cout << "Loading files..." << endl;
-		// pm.loadText(text);
 		pm.loadTextChunk(text);
 		pm.loadPattern(pattern);
 		cout << "Files Loaded. Matching started..." << endl;
@@ -32,7 +31,7 @@ int main(int argc, char* argv[])
 
 	// MatchingTester::testCodedNaiveParallelOpenMP(pm);
 
-	// MatchingTester::testCodedBoyerMooreOpenMP(pm);
+	MatchingTester::testCodedBoyerMooreParallel(pm);
 
 	MatchingTester::testCodedBoyerMooreParallelOpenMP(pm);
 

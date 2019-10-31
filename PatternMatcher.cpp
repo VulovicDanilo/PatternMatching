@@ -1327,13 +1327,13 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP()
 		}
 
 		t.stop();
-		cout << "[BOYER-MOORE - CODED]: Text length: " << text.size() <<
+		cout << "[BOYER-MOORE with OpenMP - CODED]: Text length: " << text.size() <<
 			", Pattern length: " << pattern.size() <<
 			" -> Time: " << t.elapsed() << endl;
 	}
 	else
 	{
-		cout << "[BOYER-MOORE - CODED]: Text and pattern did not load properly...";
+		cout << "[BOYER-MOORE with OpenMP - CODED]: Text and pattern did not load properly...";
 	}
 	return matches;
 }

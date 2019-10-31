@@ -1,11 +1,13 @@
 #pragma once
 
 #include "MatchingTester.h"
-
+#include <iterator>
 using namespace std;
 
 bool MatchingTester::test(PatternMatcher& pm, vector<int> matches)
 {
+	set<int> s(matches.begin(), matches.end());
+	matches.assign(s.begin(), s.end());
 	bool correct = true;
 	for (unsigned int i = 0; (i < matches.size() && correct); i++)
 	{
@@ -174,6 +176,7 @@ bool MatchingTester::testCodedBoyerMooreParallelOpenMP(PatternMatcher& pm)
 		return MatchingTester::test(pm, matches);
 	}
 }
+
 
 bool MatchingTester::testNaiveParallel(PatternMatcher& pm)
 {
