@@ -38,6 +38,50 @@ vector<unsigned char> PatternMatcher::encode(vector<char> text)
 	return coded;
 }
 
+vector<unsigned char> PatternMatcher::encode2(vector<char> text)
+{
+	vector<unsigned char> coded;
+	coded.reserve(text.size() / 4);
+
+	for (int i = 0; i < text.size(); i += 4)
+	{
+		char group = 0;
+
+		group |= (text[i] >> 1) % 4;
+		group <<= 2;
+		group |= (text[i + 1] >> 1) % 4;
+		group <<= 2;
+		group |= (text[i + 2] >> 1) % 4;
+		group <<= 2;
+		group |= (text[i + 3] >> 1) % 4;
+
+		coded.push_back(group);
+	}
+	return coded;
+}
+
+vector<unsigned char> PatternMatcher::encode3(vector<char> text)
+{
+	vector<unsigned char> coded;
+	coded.reserve(text.size() / 4);
+
+	for (int i = 0; i < text.size(); i += 4)
+	{
+		char group = 0;
+		char mask = 3;
+		group |= (text[i] >> 1)& mask;
+		group <<= 2;
+		group |= (text[i + 1] >> 1)& mask;
+		group <<= 2;
+		group |= (text[i + 2] >> 1)& mask;
+		group <<= 2;
+		group |= (text[i + 3] >> 1)& mask;
+
+		coded.push_back(group);
+	}
+	return coded;
+}
+
 char PatternMatcher::getCodedValue(char c)
 {
 	if (c == 'A')
@@ -83,6 +127,7 @@ void PatternMatcher::loadPattern(std::string patternFileName)
 			(istreambuf_iterator<char>()));
 
 		pattern.erase(std::remove(pattern.begin(), pattern.end(), '\n'), pattern.end());
+		pattern.erase(std::remove(pattern.begin(), pattern.end(), '\r'), pattern.end());
 		t.stop();
 		cout << "Pattern loaded in: " << t.elapsed() << " sekundi." << endl;
 	}
@@ -915,8 +960,8 @@ vector<int> PatternMatcher::coded_naive()
 {
 	vector<int> matches;
 
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -966,8 +1011,8 @@ vector<int> PatternMatcher::coded_boyer_moore()
 {
 	vector<int> matches;
 
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1025,8 +1070,8 @@ vector<int> PatternMatcher::coded_naiveOpenMP()
 {
 	vector<int> matches;
 
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1080,8 +1125,8 @@ vector<int> PatternMatcher::coded_naiveOpenMP()
 
 vector<int> PatternMatcher::coded_naiveParallel()
 {
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1178,8 +1223,8 @@ vector<int> PatternMatcher::coded_naiveParallel()
 
 vector<int> PatternMatcher::coded_naiveParallelOpenMP()
 {
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1279,8 +1324,8 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP()
 {
 	vector<int> matches;
 
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1340,8 +1385,11 @@ vector<int> PatternMatcher::coded_boyer_mooreOpenMP()
 
 vector<int> PatternMatcher::coded_boyer_mooreParallel()
 {
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	Timer e;
+	e.start();
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
+	e.stop();
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1423,7 +1471,7 @@ vector<int> PatternMatcher::coded_boyer_mooreParallel()
 			t.stop();
 			cout << "[BOYER-MOORE parallel - CODED]: Text length: " << text.size() <<
 				", Pattern length: " << pattern.size() <<
-				" -> Time: " << t.elapsed() << endl;
+				" -> Time: " << t.elapsed() << " + Encoding time: " << e.elapsed() << endl;
 		}
 		delete[] counts;
 		delete[] displs;
@@ -1438,8 +1486,11 @@ vector<int> PatternMatcher::coded_boyer_mooreParallel()
 
 vector<int> PatternMatcher::coded_boyer_mooreParallelOpenMP()
 {
-	vector<unsigned char> codedText = encode(text);
-	vector<unsigned char> codedPattern = encode(pattern);
+	Timer e;
+	e.start();
+	vector<unsigned char> codedText = encode3(text);
+	vector<unsigned char> codedPattern = encode3(pattern);
+	e.stop();
 
 	size_t N = codedText.size();
 	size_t M = codedPattern.size();
@@ -1521,7 +1572,7 @@ vector<int> PatternMatcher::coded_boyer_mooreParallelOpenMP()
 			t.stop();
 			cout << "[BOYER-MORE parallel with OpenMP - CODED]: Text length: " << text.size() <<
 				", Pattern length: " << pattern.size() <<
-				" -> Time: " << t.elapsed() << endl;
+				" -> Time: " << t.elapsed() <<  " + Encoding time: " << e.elapsed()  << endl;
 		}
 		delete[] counts;
 		delete[] displs;

@@ -19,6 +19,9 @@ private:
 	std::vector<char> pattern;
 
 	std::vector<unsigned char> encode(std::vector<char> text);
+	std::vector<unsigned char> encode2(std::vector<char> text);
+	std::vector<unsigned char> encode3(std::vector<char> text);
+
 	char getCodedValue(char base);
 
 	friend class MatchingTester;
