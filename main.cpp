@@ -49,6 +49,7 @@ int main(int argc, char* argv[])
 
 			MatchingTester::testNaive(pm);
 			MatchingTester::testNaiveParallel(pm);
+			MatchingTester::testNaiveParallelOpenMP(pm);
 			MatchingTester::testBoyerMoore(pm);
 			MatchingTester::testBoyerMooreParallel(pm);
 
