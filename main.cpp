@@ -14,16 +14,16 @@ int main(int argc, char* argv[])
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	vector<string> genomes =
 	{
-		"genome_1mb",
+		"./files/genome_1mb",
 		"genome_50mb.fa",
 		"genome_100mb.fa",
 		"genome_250mb.fa",
 		"genome_1gb.fa",
-		//"genome_3gb.fa"
+		// "genome_3gb.fa"
 	};
 	vector<string> patterns =
 	{
-		"pattern_32.fa",
+		"./files/pattern_32.fa",
 		"pattern_128.fa",
 		"pattern_256.fa",
 		"pattern_521.fa"

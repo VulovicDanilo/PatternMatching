@@ -82,6 +82,30 @@ vector<unsigned char> PatternMatcher::encode3(vector<char> text)
 	return coded;
 }
 
+void PatternMatcher::encodeParallel3(vector<char> text)
+{
+	Timer t;
+	t.start();
+	int rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int finalSize = text.size() >> 2;
+	codedText.resize(finalSize);
+
+	vector<char> recv;
+	int partSize = text.size() / size;
+	recv.resize(partSize);
+
+	MPI_Scatter(text.data(), partSize, MPI_CHAR, recv.data(), partSize, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+	vector<unsigned char> localCoded = encode3(recv);
+
+	MPI_Gather(localCoded.data(), partSize >> 2, MPI_UNSIGNED_CHAR, codedText.data(), partSize >> 2, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+	t.stop();
+	cout << "Sequence encoded in " << t.elapsed() << endl;
+}
+
 char PatternMatcher::getCodedValue(char c)
 {
 	if (c == 'A')
@@ -109,6 +133,7 @@ void PatternMatcher::loadText(std::string textFileName)
 		text.erase(std::remove(text.begin(), text.end(), '\n'), text.end());
 		t.stop();
 		cout << "Text loaded in: " << t.elapsed() << " sekundi." << endl;
+		encodeParallel3(text);
 	}
 	else
 	{
@@ -130,6 +155,7 @@ void PatternMatcher::loadPattern(std::string patternFileName)
 		pattern.erase(std::remove(pattern.begin(), pattern.end(), '\r'), pattern.end());
 		t.stop();
 		cout << "Pattern loaded in: " << t.elapsed() << " sekundi." << endl;
+
 	}
 	else
 	{
@@ -149,6 +175,7 @@ void PatternMatcher::loadTextChunk(string textFileName)
 	}
 	t.stop();
 	cout << "Text loaded in " << t.elapsed() << " seconds." << endl;
+	encodeParallel3(text);
 }
 
 vector<int> PatternMatcher::naive()
